@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>BRAIN-LORD NET</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#050506;color:#f3e6c4;font-family:Arial,sans-serif;overflow:hidden}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+.top{position:fixed;top:8px;left:10px;right:10px;z-index:2;display:flex;justify-content:space-between;gap:8px;pointer-events:none}
+.stamp{border:3px solid #f5d442;color:#f5d442;padding:6px 9px;font-weight:900;letter-spacing:.1em;background:#000a}
+.hint{font-size:12px;opacity:.75;max-width:56%}
+.top button{pointer-events:auto;background:#f5d442;border:3px solid #111;font-weight:800;padding:8px 10px}
+.panel{position:fixed;left:0;right:0;bottom:0;background:#120f0bdd;border-top:4px solid #f5d442;padding:10px 12px 16px;z-index:2}
+.title{margin:0 0 6px;color:#f5d442;font:900 16px Impact,Arial}
+.bubble{background:#f3e6c4;color:#111;border:3px solid #111;border-radius:14px 14px 14px 4px;padding:8px 10px;font-size:14px}
+</style>
+</head>
+<body>
+<div class="top">
+  <div>
+    <div class="stamp">NET 3D</div>
+    <div class="hint">Потяни — крутится. Нажми шар — загорится он и его нервы.</div>
+  </div>
+  <button id="go">СИГНАЛ</button>
+</div>
+<canvas id="c"></canvas>
+<div class="panel">
+  <h2 class="title" id="ttl">НЕЙРОСЕТЬ</h2>
+  <div class="bubble" id="txt">Шлема нет. Чёрный космос, узлы, живые связи.</div>
+</div>
+<script>
+const clans = [
+  {n:'LORD',c:'#f5d442',j:'Центр. Ты.'},
+  {n:'КОМАНДА',c:'#f3e6c4',j:'Цель.'},
+  {n:'ИГРА',c:'#f5d442',j:'Теория игр.'},
+  {n:'OSINT',c:'#3dff6a',j:'Открытые источники.'},
+  {n:'НАУКА',c:'#8ecbff',j:'Факт или не знаю.'},
+  {n:'НЕЙРО',c:'#ff8a2a',j:'Внимание.'},
+  {n:'ПСИХ',c:'#b56bff',j:'Чувство.'},
+  {n:'PR',c:'#e23b3b',j:'Повестка.'},
+  {n:'МЕДИА',c:'#4aa3ff',j:'Кто уже сказал.'},
+  {n:'ТРЕНД',c:'#7cffb2',j:'Волна или шум.'},
+  {n:'РЫНОК',c:'#ffd27a',j:'Кто платит.'},
+  {n:'SMM',c:'#ff6ad5',j:'Лента.'},
+  {n:'ПРОД',c:'#ffa64a',j:'Срок.'},
+  {n:'СЕЗОН',c:'#ff4d6d',j:'Дуга.'}
+];
+const cv=document.getElementById('c'), ctx=cv.getContext('2d');
+const nodes=[], sparks=[];
+let W,H,CX,CY, rotY=0.7, rotX=0.25, destY=0.7, destX=0.25, zoom=1, destZ=1;
+function layout(){
+  nodes.length=0;
+  clans.forEach((cl,i)=>{
+    let x=0,y=0,z=0;
+    if(i){
+      const phi=Math.acos(-1+(2*(i-1)+1)/(clans.length-1));
+      const th=Math.PI*(1+Math.sqrt(5))*(i-1);
+      const r=1.05;
+      x=r*Math.sin(phi)*Math.cos(th);
+      y=r*Math.cos(phi)*0.9;
+      z=r*Math.sin(phi)*Math.sin(th);
+    }
+    nodes.push({...cl,x,y,z,hot:0,i});
+  });
+}
+layout();
+function resize(){
+  const d=Math.min(devicePixelRatio||1,2);
+  W=innerWidth; H=Math.max(innerHeight-150,260);
+  cv.style.height=H+'px';
+  cv.width=W*d; cv.height=H*d; ctx.setTransform(d,0,0,d,0,0);
+  CX=W/2; CY=H/2;
+}
+addEventListener('resize',resize); resize();
+function rot(p){
+  let x=p.x,y=p.y,z=p.z;
+  let c=Math.cos(rotY), s=Math.sin(rotY);
+  let x1=x*c-z*s, z1=x*s+z*c;
+  c=Math.cos(rotX); s=Math.sin(rotX);
+  let y1=y*c-z1*s, z2=y*s+z1*c;
+  const f=420*zoom/(3.2+z2);
+  return {x:CX+x1*f, y:CY+y1*f, z:z2, s:f};
+}
+const links=[];
+function buildLinks(){
+  links.length=0;
+  for(let i=1;i<nodes.length;i++) links.push({a:0,b:i,kind:'rad'});
+  for(let i=1;i<nodes.length;i++) links.push({a:i,b:1+(i%(nodes.length-1)),kind:'ring'});
+}
+buildLinks();
+function say(t,d){document.getElementById('ttl').textContent=t;document.getElementById('txt').textContent=d;}
+function ignite(n){
+  n.hot=1;
+  say(n.n, n.j+' Узел и его нервы горят.');
+  if(n.i===0){
+    nodes.forEach(q=>{q.hot=1; if(q.i) sparks.push({a:0,b:q.i,t:0,col:q.c});});
+  } else {
+    nodes[0].hot=1;
+    sparks.push({a:n.i,b:0,t:0,col:n.c});
+    sparks.push({a:0,b:n.i,t:0,col:'#f5d442'});
+  }
+}
+document.getElementById('go').onclick=()=>ignite(nodes[0]);
+let drag=false,lx=0,ly=0,moved=0,pinch=0;
+cv.addEventListener('pointerdown',e=>{drag=true;moved=0;lx=e.clientX;ly=e.clientY;cv.setPointerCapture(e.pointerId);});
+cv.addEventListener('pointermove',e=>{
+  if(!drag) return;
+  destY += (e.clientX-lx)*0.008;
+  destX += (e.clientY-ly)*0.006;
+  destX=Math.max(-1.2,Math.min(1.2,destX));
+  moved += Math.abs(e.clientX-lx)+Math.abs(e.clientY-ly);
+  lx=e.clientX; ly=e.clientY;
+});
+cv.addEventListener('pointerup',e=>{
+  drag=false;
+  if(moved>14) return;
+  const r=cv.getBoundingClientRect();
+  const px=e.clientX-r.left, py=e.clientY-r.top;
+  let best=null, bd=9999;
+  nodes.forEach(n=>{
+    const p=rot(n); const d=Math.hypot(p.x-px,p.y-py);
+    if(d<p.s*0.22 && d<bd){bd=d;best=n;}
+  });
+  if(best) ignite(best);
+});
+cv.addEventListener('touchstart',e=>{
+  if(e.touches.length===2){
+    pinch=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+  }
+},{passive:true});
+cv.addEventListener('touchmove',e=>{
+  if(e.touches.length===2 && pinch){
+    const p=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+    destZ *= p/pinch; destZ=Math.max(0.55,Math.min(2.2,destZ)); pinch=p;
+  }
+},{passive:true});
+function tick(){
+  requestAnimationFrame(tick);
+  rotY+=(destY-rotY)*0.12; rotX+=(destX-rotX)*0.12; zoom+=(destZ-zoom)*0.12;
+  ctx.fillStyle='#050506'; ctx.fillRect(0,0,W,H);
+  const grd=ctx.createRadialGradient(CX,CY,20,CX,CY,Math.max(W,H)*0.6);
+  grd.addColorStop(0,'#0b1210'); grd.addColorStop(1,'#050506');
+  ctx.fillStyle=grd; ctx.fillRect(0,0,W,H);
+  const proj=nodes.map(n=>({n,p:rot(n)}));
+  links.forEach(L=>{
+    const A=proj[L.a], B=proj[L.b];
+    const heat=Math.max(A.n.hot,B.n.hot);
+    ctx.beginPath(); ctx.moveTo(A.p.x,A.p.y); ctx.lineTo(B.p.x,B.p.y);
+    ctx.strokeStyle=L.kind==='rad'?B.n.c:'#3dff6a';
+    ctx.globalAlpha=0.18+heat*0.7;
+    ctx.lineWidth=1.2+heat*2.4;
+    ctx.stroke(); ctx.globalAlpha=1;
+  });
+  sparks.forEach(s=>{
+    s.t+=0.02;
+    const A=rot(nodes[s.a]), B=rot(nodes[s.b]);
+    const t=Math.min(s.t,1);
+    const x=A.x+(B.x-A.x)*t, y=A.y+(B.y-A.y)*t;
+    ctx.beginPath(); ctx.arc(x,y,4+t*2,0,6.3);
+    ctx.fillStyle=s.col; ctx.shadowColor=s.col; ctx.shadowBlur=12; ctx.fill(); ctx.shadowBlur=0;
+  });
+  for(let i=sparks.length-1;i>=0;i--) if(sparks[i].t>1.2) sparks.splice(i,1);
+  proj.sort((a,b)=>a.p.z-b.p.z).forEach(({n,p})=>{
+    n.hot*=0.965;
+    const r=(n.i===0?16:9)* (0.7+p.s/420) * (1+n.hot*0.45);
+    ctx.beginPath(); ctx.arc(p.x,p.y,r+6*n.hot,0,6.3);
+    ctx.fillStyle=n.c; ctx.globalAlpha=0.12+n.hot*0.35; ctx.fill(); ctx.globalAlpha=1;
+    ctx.beginPath(); ctx.arc(p.x,p.y,r,0,6.3);
+    ctx.fillStyle='#0b0b0c'; ctx.fill();
+    ctx.lineWidth=2.5; ctx.strokeStyle=n.c; ctx.shadowColor=n.c; ctx.shadowBlur=8+20*n.hot; ctx.stroke(); ctx.shadowBlur=0;
+    ctx.fillStyle='#f3e6c4'; ctx.font='700 11px Arial'; ctx.textAlign='center';
+    ctx.fillText(n.n,p.x,p.y+r+14);
+  });
+}
+tick();
+</script>
+</body>
+</html>
