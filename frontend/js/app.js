@@ -13,12 +13,22 @@
     const t = new Date().toLocaleTimeString("ru-RU", { hour12: false });
     logEl.textContent = t + "  " + s + "\n" + logEl.textContent;
   }
+  let spin = 0.003;
+  let pulse = 0;
+  const grey = { r: 0.35, g: 0.35, b: 0.36 };
+  const red = { r: 0.85, g: 0.11, b: 0.11 };
+  function fire(label) {
+    spin = 0.028;
+    pulse = 1;
+    if (hudPick) hudPick.textContent = "ИМПУЛЬС: " + label;
+    log("импульс · " + label);
+  }
   document.querySelectorAll(".tab").forEach(function (btn) {
     btn.addEventListener("click", function () {
       document.querySelectorAll(".tab").forEach(function (b) { b.classList.remove("on"); });
       btn.classList.add("on");
       note.textContent = clans[btn.dataset.clan] || "";
-      log("клан " + btn.textContent.trim());
+      fire(btn.textContent.trim());
     });
   });
   document.getElementById("prov").addEventListener("input", function (e) {
@@ -34,85 +44,99 @@
     document.getElementById("k-hyp").textContent = "декомпозиция CPO";
     document.getElementById("k-cnt").textContent = "черновик в очереди";
     document.getElementById("k-ok").textContent = "pending_approval · " + p + " · " + tone;
-    log("EXECUTE · в очередь · в сеть не ушло");
+    fire("EXECUTE");
+    log("EXECUTE · pending_approval · в сеть не ушло");
   });
-  const labels = ["LORD", "CPO", "OSINT", "МАСС", "PR", "QA", "ШОУ"];
-  const nodes = labels.map(function (n, i) {
-    if (!i) return { n: n, x: 0, y: 0, z: 0, hot: 0 };
-    const phi = Math.acos(-1 + (2 * (i - 1) + 1) / (labels.length - 1));
-    const th = Math.PI * (1 + Math.sqrt(5)) * (i - 1);
-    return { n: n, x: Math.sin(phi) * Math.cos(th), y: Math.cos(phi) * 0.85, z: Math.sin(phi) * Math.sin(th), hot: 0 };
-  });
-  const cv = document.getElementById("brain");
-  const ctx = cv.getContext("2d");
-  let W, H, rotY = 0.6, rotX = 0.2, dY = 0.6, dX = 0.2, drag = false, lx = 0, ly = 0, moved = 0;
+  if (typeof THREE === "undefined") { log("three.js не загрузился"); return; }
+  const wrap = document.getElementById("brain-container");
+  const canvas = document.getElementById("brain");
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.Fog(0x050505, 6.5, 14);
+  const cam = new THREE.PerspectiveCamera(42, 1, 0.1, 40);
+  cam.position.set(0, 0.15, 6.2);
+  const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: false, alpha: false });
+  renderer.setClearColor(0x050505);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
   function resize() {
-    const r = cv.parentElement.getBoundingClientRect();
-    const d = Math.min(devicePixelRatio || 1, 2);
-    W = r.width; H = r.height;
-    cv.width = W * d; cv.height = H * d;
-    cv.style.width = W + "px"; cv.style.height = H + "px";
-    ctx.setTransform(d, 0, 0, d, 0, 0);
+    const w = wrap.clientWidth || 1;
+    const h = wrap.clientHeight || 1;
+    cam.aspect = w / h;
+    cam.updateProjectionMatrix();
+    renderer.setSize(w, h, false);
   }
-  addEventListener("resize", resize); resize();
-  function proj(p) {
-    const cy = Math.cos(rotY), sy = Math.sin(rotY);
-    const cx = Math.cos(rotX), sx = Math.sin(rotX);
-    const x1 = p.x * cy - p.z * sy;
-    const z1 = p.x * sy + p.z * cy;
-    const y1 = p.y * cx - z1 * sx;
-    const z2 = p.y * sx + z1 * cx;
-    const f = Math.min(W, H) * 0.42 / (2.4 + z2);
-    return { x: W / 2 + x1 * f, y: H / 2 + y1 * f, z: z2 };
+  window.addEventListener("resize", resize);
+  resize();
+  const root = new THREE.Group();
+  scene.add(root);
+  const N = 320;
+  const pts = [];
+  function lobe(side, count) {
+    for (let i = 0; i < count; i++) {
+      const theta = 2 * Math.PI * Math.random();
+      const phi = Math.acos(2 * Math.random() - 1);
+      const rr = Math.cbrt(Math.random());
+      pts.push(new THREE.Vector3(
+        side * 0.55 + rr * 1.15 * Math.sin(phi) * Math.cos(theta),
+        rr * 0.85 * Math.cos(phi),
+        rr * 0.95 * Math.sin(phi) * Math.sin(theta)
+      ));
+    }
   }
-  cv.addEventListener("pointerdown", function (e) {
-    drag = true; moved = 0; lx = e.clientX; ly = e.clientY; cv.setPointerCapture(e.pointerId);
+  lobe(-1, N / 2);
+  lobe(1, N / 2);
+  const pos = new Float32Array(N * 3);
+  for (let i = 0; i < N; i++) { pos[i * 3] = pts[i].x; pos[i * 3 + 1] = pts[i].y; pos[i * 3 + 2] = pts[i].z; }
+  const pGeo = new THREE.BufferGeometry();
+  pGeo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  root.add(new THREE.Points(pGeo, new THREE.PointsMaterial({ color: 0xf4f1ea, size: 0.035, sizeAttenuation: true })));
+  const K = 2;
+  const segs = [];
+  const seen = {};
+  for (let i = 0; i < N; i++) {
+    const dist = [];
+    for (let j = 0; j < N; j++) {
+      if (i !== j) dist.push({ j: j, d: pts[i].distanceToSquared(pts[j]) });
+    }
+    dist.sort(function (a, b) { return a.d - b.d; });
+    for (let k = 0; k < K; k++) {
+      const j = dist[k].j;
+      const key = i < j ? i + "-" + j : j + "-" + i;
+      if (seen[key]) continue;
+      seen[key] = 1;
+      segs.push(i, j);
+    }
+  }
+  const lpos = new Float32Array(segs.length * 3);
+  for (let s = 0; s < segs.length; s++) {
+    const p = pts[segs[s]];
+    lpos[s * 3] = p.x; lpos[s * 3 + 1] = p.y; lpos[s * 3 + 2] = p.z;
+  }
+  const lGeo = new THREE.BufferGeometry();
+  lGeo.setAttribute("position", new THREE.BufferAttribute(lpos, 3));
+  const lMat = new THREE.LineBasicMaterial({ color: 0x5a5a5c, transparent: true, opacity: 0.32 });
+  root.add(new THREE.LineSegments(lGeo, lMat));
+  let drag = false, lx = 0, ly = 0;
+  canvas.addEventListener("pointerdown", function (e) {
+    drag = true; lx = e.clientX; ly = e.clientY; canvas.setPointerCapture(e.pointerId);
   });
-  cv.addEventListener("pointermove", function (e) {
+  canvas.addEventListener("pointermove", function (e) {
     if (!drag) return;
-    dY += (e.clientX - lx) * 0.008;
-    dX = Math.max(-1.1, Math.min(1.1, dX + (e.clientY - ly) * 0.006));
-    moved += Math.abs(e.clientX - lx) + Math.abs(e.clientY - ly);
+    root.rotation.y += (e.clientX - lx) * 0.005;
+    root.rotation.x = Math.max(-0.7, Math.min(0.7, root.rotation.x + (e.clientY - ly) * 0.004));
     lx = e.clientX; ly = e.clientY;
   });
-  cv.addEventListener("pointerup", function (e) {
-    drag = false;
-    if (moved > 12) return;
-    const r = cv.getBoundingClientRect();
-    const px = e.clientX - r.left, py = e.clientY - r.top;
-    let best = null, bd = 28;
-    nodes.forEach(function (n) {
-      const p = proj(n);
-      const d = Math.hypot(p.x - px, p.y - py);
-      if (d < bd) { bd = d; best = n; }
-    });
-    if (best) { best.hot = 1; hudPick.textContent = "УЗЕЛ: " + best.n; log("узел " + best.n); }
-  });
+  canvas.addEventListener("pointerup", function () { drag = false; });
   function tick() {
     requestAnimationFrame(tick);
-    rotY += (dY - rotY) * 0.1;
-    rotX += (dX - rotX) * 0.1;
-    if (!drag) dY += 0.003;
-    ctx.fillStyle = "#050505"; ctx.fillRect(0, 0, W, H);
-    const g = ctx.createRadialGradient(W / 2, H / 2, 10, W / 2, H / 2, Math.max(W, H) * 0.55);
-    g.addColorStop(0, "#140808"); g.addColorStop(1, "#050505");
-    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-    for (let i = 1; i < nodes.length; i++) {
-      const a = proj(nodes[0]), b = proj(nodes[i]);
-      const heat = Math.max(nodes[0].hot, nodes[i].hot);
-      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
-      ctx.strokeStyle = "#d91b1b"; ctx.globalAlpha = 0.22 + heat * 0.55; ctx.lineWidth = 1 + heat * 2; ctx.stroke(); ctx.globalAlpha = 1;
-    }
-    nodes.map(function (n) { return { n: n, p: proj(n) }; }).sort(function (a, b) { return a.p.z - b.p.z; }).forEach(function (o) {
-      o.n.hot *= 0.96;
-      const rad = (o.n.n === "LORD" ? 8 : 5) + o.n.hot * 4;
-      ctx.beginPath(); ctx.arc(o.p.x, o.p.y, rad, 0, 6.3);
-      ctx.fillStyle = "#050505"; ctx.fill();
-      ctx.strokeStyle = "#d91b1b"; ctx.shadowColor = "#d91b1b"; ctx.shadowBlur = 10 + o.n.hot * 16; ctx.lineWidth = 1.6; ctx.stroke(); ctx.shadowBlur = 0;
-      ctx.fillStyle = "#f3f1ea"; ctx.font = "600 10px Inter, sans-serif"; ctx.textAlign = "center";
-      ctx.fillText(o.n.n, o.p.x, o.p.y + rad + 12);
-    });
+    if (!drag) root.rotation.y += spin;
+    spin += (0.003 - spin) * 0.04;
+    pulse *= 0.96;
+    const t = 0.5 + 0.5 * Math.sin(performance.now() * 0.0025);
+    const mix = Math.max(pulse, t * 0.25);
+    lMat.color.setRGB(grey.r + (red.r - grey.r) * mix, grey.g + (red.g - grey.g) * mix, grey.b + (red.b - grey.b) * mix);
+    lMat.opacity = 0.22 + mix * 0.45;
+    renderer.render(scene, cam);
   }
   tick();
-  log("радар поднят");
+  log("three.js · " + N + " узлов · паутина");
 })();
