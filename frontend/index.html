@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BRAIN-LORD 2.0 // WAR ROOM</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: { void: '#0a0a0a', blood: '#d91b1b', ash: '#e8e4dc' },
+          fontFamily: { display: ['Oswald', 'Impact', 'sans-serif'], body: ['Inter', 'Arial', 'sans-serif'] }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://unpkg.com/cytoscape@3.28.1/dist/cytoscape.min.js"></script>
+</head>
+<body class="bg-void text-ash font-body min-h-screen">
+  <header class="bar flex items-center justify-between px-4 py-3">
+    <div class="flex items-center gap-3">
+      <div class="mark"></div>
+      <div>
+        <h1 class="font-display text-xl tracking-[0.28em]">BRAIN-LORD 2.0</h1>
+        <p class="text-[10px] tracking-[0.35em] uppercase text-ash/50">Синдикат смыслов · War Room</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-4 text-[10px] tracking-widest uppercase">
+      <span class="live">HITL</span>
+      <span class="text-ash/40">без апрува нет выхода</span>
+    </div>
+  </header>
+
+  <main class="grid grid-cols-1 lg:grid-cols-[20%_60%_20%] min-h-[calc(100vh-56px)]">
+    <aside class="panel-l p-3 space-y-2">
+      <p class="font-display text-xs tracking-[0.25em] text-blood mb-3">КЛАНЫ</p>
+      <details open class="acc"><summary>PM ШТАБ</summary><ul><li>CPO Agent</li><li>Оркестратор</li><li>Очередь апрува</li></ul></details>
+      <details class="acc"><summary>ИНЖЕНЕРЫ МАСС</summary><ul><li>Нейропсихолог</li><li>Шоураннер</li><li>Тон / рамка</li></ul></details>
+      <details class="acc"><summary>ХАКЕРЫ ИНФОПОЛЯ</summary><ul><li>Трикстер (взрывной PR)</li><li>Повестка</li><li>Антикризис</li></ul></details>
+      <details class="acc"><summary>OSINT</summary><ul><li>Сбор открытых источников</li><li>Фильтр версий</li></ul></details>
+    </aside>
+
+    <section class="p-3 flex flex-col gap-3">
+      <div class="box flex-1 min-h-[280px] relative">
+        <div class="box-label">РАДАР АГЕНТОВ</div>
+        <div id="cy" class="w-full h-[42vh] lg:h-[46vh]"></div>
+      </div>
+      <div class="box p-3">
+        <div class="box-label">МАТРИЧНЫЙ КАНБАН</div>
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-2 mt-6">
+          <div class="col"><h3>OSINT</h3><article>Следы в открытом поле · черновик</article></div>
+          <div class="col"><h3>ГИПОТЕЗЫ</h3><article>Рамка ещё не утверждена</article></div>
+          <div class="col"><h3>КОНТЕНТ</h3><article>Текст ждёт сборки шоураннера</article></div>
+          <div class="col col-wait"><h3>ОДОБРЕНИЕ</h3><article>Пусто. Нажми EXECUTE — встанет сюда</article></div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="panel-r p-3 flex flex-col gap-3">
+      <p class="font-display text-xs tracking-[0.25em] text-blood">ПУЛЬТ</p>
+      <div id="agent-card" class="box p-3 text-sm">
+        <p class="text-[10px] tracking-widest text-ash/40">АГЕНТ</p>
+        <p id="agent-name" class="font-display text-lg">— выбери узел</p>
+        <p id="agent-status" class="text-ash/70 mt-1">Статус: idle</p>
+      </div>
+      <label class="block text-[10px] tracking-widest uppercase text-ash/50">Уровень провокации <span id="v-prov">30</span></label>
+      <input id="prov" type="range" min="0" max="100" value="30">
+      <label class="block text-[10px] tracking-widest uppercase text-ash/50">Тон <span id="v-tone">нейтраль</span></label>
+      <input id="tone" type="range" min="0" max="100" value="50">
+      <button id="execute" class="exec font-display tracking-[0.3em]">EXECUTE</button>
+      <div class="box flex-1 p-3 min-h-[140px]">
+        <p class="text-[10px] tracking-widest text-ash/40 mb-2">КОНСОЛЬ</p>
+        <pre id="log" class="text-[11px] leading-5 whitespace-pre-wrap">система в режиме наблюдения
+публикация заблокирована до апрува</pre>
+      </div>
+    </aside>
+  </main>
+  <script src="js/app.js"></script>
+</body>
+</html>
