@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>BRAIN-LORD HQ</title>
+<style>
+*{box-sizing:border-box;touch-action:manipulation}
+html,body{margin:0;height:100%;background:#070708;color:#f2e6c8;font-family:Arial,sans-serif;overflow:hidden}
+body{background:radial-gradient(700px 420px at 50% 120%,rgba(61,255,106,.1),transparent 50%),#070708}
+#c{width:100%;height:calc(100% - 168px);display:block}
+header{position:absolute;top:8px;left:10px;right:10px;z-index:2;display:flex;justify-content:space-between;gap:8px}
+.stamp{border:3px solid #f5d442;color:#f5d442;padding:5px 8px;font-weight:900;letter-spacing:.1em;background:#000c}
+.hint{font-size:11px;opacity:.7;max-width:58%}
+.panel{position:fixed;left:0;right:0;bottom:0;background:#120f0b;border-top:4px solid #f5d442;padding:10px 12px 16px;min-height:160px}
+.title{margin:0 0 6px;color:#f5d442;font:900 16px Impact,Arial}
+.bubble{background:#f3e6c4;color:#111;border:3px solid #111;border-radius:14px 14px 14px 4px;padding:8px 10px;font-size:14px;line-height:1.35}
+.row{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+button{background:#f5d442;border:3px solid #111;font-weight:800;padding:8px 10px}
+.ghost{background:transparent;color:#eee;border-color:#666}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <div class="stamp">BRAIN-LORD HQ</div>
+    <div class="hint">Тяни клан или нажми. Откроются нервы и боты. 13 кланов ≈ 100 агентов.</div>
+  </div>
+  <button id="closeAll" class="ghost">Свернуть всё</button>
+</header>
+<canvas id="c"></canvas>
+<div class="panel">
+  <h2 class="title" id="ttl">ШТАБ</h2>
+  <div class="bubble" id="txt">Это карта агентства. Центр — ты. Круги — кланы. Потяни клан в сторону — вылезут его агенты и связи.</div>
+  <div class="row">
+    <button id="copy">Скопировать правку</button>
+    <button id="add" class="ghost">Хочу нового агента</button>
+  </div>
+</div>
+<script>
+const clans = [
+  {id:'cmd', name:'КОМАНДА', lead:'ТЫ', color:'#f3e6c4', job:'Даёшь цель. Без тебя штаб молчит.',
+    bots:['Хранитель цели','Вестник','Сторож бюджета','Архивариус','Вето','Секретарь смены','Летописец']},
+  {id:'game', name:'ИГРА', lead:'СТРАТЕГ', color:'#f5d442', job:'Считает ходы чужих и своих.',
+    bots:['Матрица выигрышей','Штакельберг','Блеф-детектор','Союзник/враг','Цена хода','Ловушка равновесия','План Б','Контрудар']},
+  {id:'osint', name:'OSINT', lead:'РАЗВЕДКА', color:'#3dff6a', job:'Только открытые источники. Не взлом.',
+    bots:['Сборщик следов','Картограф людей','Проверка фото','Таймлайн','Зеркало версий','Фильтр слухов','Источник-страж','Архив ссылок']},
+  {id:'sci', name:'НАУКА', lead:'ЦЕНТР', color:'#8ecbff', job:'Факт или «не знаю».',
+    bots:['Рецензент','Методолог','Статистик','Анти-хайп','Библиотекарь','Повторяемость','Граница знания']},
+  {id:'neuro', name:'НЕЙРОМАРКЕТ', lead:'ТРИГГЕР', color:'#ff8a2a', job:'Рамка внимания, не «взлом мозга».',
+    bots:['Якорь','Дефицит','Потеря','Новизна','Соцдоказательство','Стори','Барьер скуки','Первый кадр']},
+  {id:'psy', name:'ПСИХ', lead:'НЕЙРОПСИХ', color:'#b56bff', job:'Как человек это переживёт.',
+    bots:['Тон доверия','Страх','Стыд','Надежда','Выгорание аудитории','Травма-стоп','Ясность']},
+  {id:'pr', name:'PR', lead:'ПОВЕСТКА', color:'#e23b3b', job:'Заголовок и антикризис. Чёрное — только как угроза.',
+    bots:['Заголовок','Спикер','Контр-рамка','Кризис','Репутация','Тишина как ход','Легенда','Сцена выхода']},
+  {id:'media', name:'МЕДИА', lead:'АНАЛИЗ', color:'#4aa3ff', job:'Кто уже сказал и чью рамку повторяют.',
+    bots:['Монитор СМИ','Тон издания','Повтор рамки','Молчание медиа','Оппонент-цитата','Карта площадок','Фейк-фильтр']},
+  {id:'trend', name:'ТРЕНД', lead:'ВОЛНА', color:'#7CFFB2', job:'Что растёт. Что шум.',
+    bots:['Пик волны','Мёртвый мем','Платформа','Скорость спреда','Усталость темы','Ниша','Сезон']},
+  {id:'mkt', name:'РЕСЕРЧ', lead:'РЫНОК', color:'#ffd27a', job:'Кто платит и чего боится.',
+    bots:['Сегмент','Боль','Цена','Барьер входа','Конкурент','Гипотеза оффера','Полевое наблюдение']},
+  {id:'smm', name:'SMM', lead:'ЛЕНТА', color:'#ff6ad5', job:'Формат поста. Сам не публикует.',
+    bots:['Ритм','Хук первой строки','Серия','Комменты','Визуал','Площадка','Кросспост-стоп']},
+  {id:'prod', name:'ПРОД', lead:'ПРОДЮСЕР', color:'#ffa64a', job:'Срок, люди, деньги, резка лишнего.',
+    bots:['Смета','Календарь','Каст','Площадка съёмки','Риск срыва','Версия короче','Доставка']},
+  {id:'show', name:'СЕЗОН', lead:'ШОУРАННЕР', color:'#ff4d6d', job:'Дуга. Чтобы главы не спорили.',
+    bots:['Библия мира','Арка героя','Клиффхэнгер','Тон серии','Канон','Спойлер-страж','Финал сезона','Хор персонажей']}
+];
+const canvas=document.getElementById('c'), ctx=canvas.getContext('2d');
+let W,H,CX,CY,open=null,say='Добавь агента в клан ... : имя и что делает. Репо только brain-lord.';
+const nodes=[], kids=[];
+function resize(){const d=window.devicePixelRatio||1;W=canvas.clientWidth;H=canvas.clientHeight;canvas.width=W*d;canvas.height=H*d;ctx.setTransform(d,0,0,d,1,0);CX=W/2;CY=H/2+10;place()}
+function place(){
+  nodes.length=0;
+  clans.forEach((c,i)=>{
+    const a=-Math.PI/2 + i*(Math.PI*2/clans.length);
+    nodes.push({...c,x:CX+Math.cos(a)*Math.min(W,H)*0.34,y:CY+Math.sin(a)*Math.min(W,H)*0.30,r:28,a});
+  });
+}
+function spawnKids(clan){
+  kids.length=0;
+  const n=clan.bots.length;
+  clan.bots.forEach((name,i)=>{
+    const a=clan.a + (i-(n-1)/2)*0.32;
+    kids.push({name,color:clan.color,tx:clan.x+Math.cos(a)*96,ty:clan.y+Math.sin(a)*78,x:clan.x,y:clan.y,t:0});
+  });
+}
+function draw(ts){
+  ctx.clearRect(0,0,W,H);
+  ctx.strokeStyle='rgba(61,255,106,.12)';ctx.lineWidth=10;ctx.beginPath();ctx.arc(CX,CY,Math.min(W,H)*0.16,0,6.3);ctx.stroke();
+  nodes.forEach(n=>{
+    ctx.beginPath();ctx.moveTo(CX,CY);ctx.lineTo(n.x,n.y);
+    ctx.strokeStyle=n.color+'55';ctx.lineWidth=open&&open.id===n.id?3:1.2;ctx.stroke();
+    const pulse=(Math.sin(ts/220+(n.a||0))+1)*0.5;
+    ctx.beginPath();ctx.arc(n.x,n.y,n.r+pulse*3,0,6.3);ctx.fillStyle='#0c0c0e';ctx.fill();
+    ctx.lineWidth=3;ctx.strokeStyle=n.color;ctx.stroke();
+    ctx.fillStyle='#f2e6c8';ctx.font='800 10px Arial';ctx.textAlign='center';
+    ctx.fillText(n.name,n.x,n.y+4);
+  });
+  ctx.beginPath();ctx.arc(CX,CY,26,0,6.3);ctx.fillStyle='#111';ctx.fill();ctx.strokeStyle='#f5d442';ctx.lineWidth=4;ctx.stroke();
+  ctx.fillStyle='#f5d442';ctx.font='900 11px Arial';ctx.textAlign='center';ctx.fillText('LORD',CX,CY+4);
+  kids.forEach(k=>{
+    k.t=Math.min(1,k.t+0.07);k.x+=(k.tx-k.x)*0.18;k.y+=(k.ty-k.y)*0.18;
+    ctx.beginPath();ctx.moveTo(open.x,open.y);ctx.lineTo(k.x,k.y);
+    ctx.strokeStyle=k.color;ctx.globalAlpha=.35+k.t*.5;ctx.lineWidth=2;ctx.setLineDash([5,7]);ctx.lineDashOffset=-ts/30;ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=1;
+    ctx.beginPath();ctx.arc(k.x,k.y,11,0,6.3);ctx.fillStyle='#14110c';ctx.fill();ctx.strokeStyle=k.color;ctx.stroke();
+    ctx.fillStyle='#eee';ctx.font='700 9px Arial';ctx.fillText(k.name,k.x,k.y+22);
+  });
+  requestAnimationFrame(draw);
+}
+function hit(x,y,list,r){for(const n of list){const dx=x-n.x,dy=y-n.y;if(dx*dx+dy*dy<(r*r))return n}return null}
+function showClan(n){
+  open=n;spawnKids(n);
+  document.getElementById('ttl').textContent=n.lead+' · '+n.name;
+  document.getElementById('txt').textContent=n.job+' Агентов в клане: '+(1+n.bots.length)+'. Нажми мелкий узел — это конкретный бот.';
+  say='Усиль клан '+n.name+' в brain-lord: добавь агента «...», коротко опиши роль. Другие репо не трогай.';
+}
+let drag=null,sx,sy;
+function pos(e){const r=canvas.getBoundingClientRect();const p=e.touches?e.touches[0]:e;return {x:p.clientX-r.left,y:p.clientY-r.top}}
+canvas.addEventListener('pointerdown',e=>{const p=pos(e);const n=hit(p.x,p.y,nodes,32);if(n){drag={n,x:p.x,y:p.y,moved:0};sx=n.x;sy=n.y}});
+canvas.addEventListener('pointermove',e=>{if(!drag)return;const p=pos(e);const dx=p.x-drag.x,dy=p.y-drag.y;drag.moved+=Math.hypot(dx,dy);drag.n.x=sx+dx;drag.n.y=sy+dy;if(drag.moved>18)showClan(drag.n)});
+canvas.addEventListener('pointerup',e=>{
+  const p=pos(e);
+  if(drag&&drag.moved<18)showClan(drag.n);
+  else {
+    const k=hit(p.x,p.y,kids,16);
+    if(k){document.getElementById('ttl').textContent=k.name;document.getElementById('txt').textContent='Бот клана '+open.name+'. Правь его одной фразой в чате Grok.';say='В клане '+open.name+' поправь бота «'+k.name+'»: сделай жёстче и короче. Запиши в agents/. Репо brain-lord.';}
+  }
+  drag=null;
+});
+document.getElementById('closeAll').onclick=()=>{open=null;kids.length=0};
+document.getElementById('copy').onclick=()=>navigator.clipboard.writeText(say).then(()=>document.getElementById('copy').textContent='СКОПИРОВАНО');
+document.getElementById('add').onclick=()=>{say='Добавь в штаб brain-lord нового агента: имя, клан, одна фраза что делает.';navigator.clipboard.writeText(say)};
+addEventListener('resize',resize);resize();requestAnimationFrame(draw);
+</script>
+</body>
+</html>
