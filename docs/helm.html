@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>BRAIN-LORD HELM</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#050506;color:#f3e6c4;font-family:Arial,sans-serif;overflow:hidden}
+#v{position:fixed;inset:0}
+.ui{position:fixed;left:10px;right:10px;top:8px;z-index:2;display:flex;justify-content:space-between;gap:8px}
+.stamp{border:3px solid #f5d442;color:#f5d442;padding:6px 9px;font-weight:900;letter-spacing:.12em;background:#000a}
+.hint{font-size:12px;opacity:.75;max-width:55%}
+.panel{position:fixed;left:0;right:0;bottom:0;z-index:2;background:#120f0bcc;border-top:4px solid #f5d442;padding:10px 12px 16px}
+.title{margin:0 0 6px;color:#f5d442;font:900 16px Impact,Arial}
+.bubble{background:#f3e6c4;color:#111;border:3px solid #111;border-radius:14px 14px 14px 4px;padding:8px 10px;font-size:14px}
+.row{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+button{background:#f5d442;border:3px solid #111;font-weight:800;padding:8px 10px}
+.ghost{background:transparent;color:#eee;border-color:#555}
+</style>
+</head>
+<body>
+<div class="ui">
+  <div>
+    <div class="stamp">HELM // LORD</div>
+    <div class="hint">Крути двумя пальцами. Нажми шлем — откроется мозг. Нажми узел — сигнал побежит.</div>
+  </div>
+  <button id="toggle">ОТКРЫТЬ ШЛЕМ</button>
+</div>
+<div id="v"></div>
+<div class="panel">
+  <h2 class="title" id="ttl">ТЁМНЫЙ ШЛЕМ</h2>
+  <div class="bubble" id="txt">Это не официальный Вейдер. Это шлем штаба. Внутри — нейросвязи кланов. Нажми «открыть», потом крути голову.</div>
+  <div class="row">
+    <button id="pulse">ПУСТИТЬ СИГНАЛ</button>
+    <button id="close" class="ghost">ЗАКРЫТЬ ШЛЕМ</button>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.min.js"></script>
+<script>
+const clans = [
+  ['КОМАНДА','#f3e6c4','Ты. Цель.'],
+  ['ИГРА','#f5d442','Теория игр.'],
+  ['OSINT','#3dff6a','Открытая разведка.'],
+  ['НАУКА','#8ecbff','Факт или не знаю.'],
+  ['НЕЙРО','#ff8a2a','Триггеры внимания.'],
+  ['ПСИХ','#b56bff','Как это чувствуют.'],
+  ['PR','#e23b3b','Повестка.'],
+  ['МЕДИА','#4aa3ff','Кто уже сказал.'],
+  ['ТРЕНД','#7cffb2','Волна или шум.'],
+  ['РЫНОК','#ffd27a','Кто платит.'],
+  ['SMM','#ff6ad5','Формат ленты.'],
+  ['ПРОД','#ffa64a','Срок и ресурсы.'],
+  ['СЕЗОН','#ff4d6d','Дуга истории.']
+];
+const view = document.getElementById('v');
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0x050506, 8, 28);
+const cam = new THREE.PerspectiveCamera(55, 1, 0.1, 80);
+cam.position.set(0, 0.4, 7.2);
+const renderer = new THREE.WebGLRenderer({antialias:true, alpha:false});
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setClearColor(0x050506);
+view.appendChild(renderer.domElement);
+const controls = new THREE.OrbitControls(cam, renderer.domElement);
+controls.enableDamping = true;
+controls.target.set(0, 0.3, 0);
+function resize(){
+  const w = innerWidth, h = innerHeight - 150;
+  cam.aspect = w / Math.max(h, 1);
+  cam.updateProjectionMatrix();
+  renderer.setSize(w, Math.max(h, 1));
+}
+addEventListener('resize', resize); resize();
+scene.add(new THREE.AmbientLight(0x334433, .7));
+const key = new THREE.PointLight(0xffdd66, 1.1, 20); key.position.set(3, 4, 5); scene.add(key);
+const ooze = new THREE.PointLight(0x33ff66, 0.55, 16); ooze.position.set(-3, -1, 3); scene.add(ooze);
+const helm = new THREE.Group();
+const brain = new THREE.Group();
+brain.visible = false;
+brain.scale.set(0.01,0.01,0.01);
+scene.add(helm); scene.add(brain);
+const black = new THREE.MeshStandardMaterial({color:0x111214, metalness:0.85, roughness:0.28});
+const darker = new THREE.MeshStandardMaterial({color:0x070708, metalness:0.7, roughness:0.35});
+const red = new THREE.MeshStandardMaterial({color:0xff2a2a, emissive:0xaa0000, emissiveIntensity:1});
+const dome = new THREE.Mesh(new THREE.SphereGeometry(1.35, 32, 24, 0, Math.PI*2, 0, Math.PI*0.58), black);
+dome.position.y = 0.55; helm.add(dome);
+const jaw = new THREE.Mesh(new THREE.SphereGeometry(1.15, 28, 18, 0, Math.PI*2, Math.PI*0.45, Math.PI*0.4), darker);
+jaw.position.y = -0.15; helm.add(jaw);
+const mask = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.55, 0.35), darker);
+mask.position.set(0, 0.22, 1.05); helm.add(mask);
+const cheekL = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.9, 0.25), black);
+cheekL.position.set(-0.7, -0.05, 0.95); helm.add(cheekL);
+const cheekR = cheekL.clone(); cheekR.position.x = 0.7; helm.add(cheekR);
+const grill = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.28, 0.5, 8), darker);
+grill.position.set(0, -0.55, 0.95); helm.add(grill);
+[-0.28, 0.28].forEach(x=>{
+  const e = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 12), red);
+  e.position.set(x, 0.28, 1.18); helm.add(e);
+});
+const rim = new THREE.Mesh(new THREE.TorusGeometry(1.32, 0.05, 8, 40), new THREE.MeshStandardMaterial({color:0x222, metalness:1, roughness:0.2}));
+rim.rotation.x = Math.PI/2; rim.position.y = 0.15; helm.add(rim);
+const core = new THREE.Mesh(new THREE.SphereGeometry(0.28, 16, 16), new THREE.MeshStandardMaterial({color:0xf5d442, emissive:0x886600, emissiveIntensity:0.8}));
+brain.add(core);
+const nodes = [];
+clans.forEach((c, i) => {
+  const phi = Math.acos(-1 + (2*i+1)/clans.length);
+  const th = Math.PI * (1 + Math.sqrt(5)) * i;
+  const r = 1.55;
+  const p = new THREE.Vector3(r*Math.sin(phi)*Math.cos(th), r*Math.cos(phi)*0.85, r*Math.sin(phi)*Math.sin(th));
+  const mat = new THREE.MeshStandardMaterial({color:c[1], emissive:c[1], emissiveIntensity:0.35});
+  const m = new THREE.Mesh(new THREE.SphereGeometry(0.16, 16, 16), mat);
+  m.position.copy(p);
+  m.userData = {name:c[0], job:c[2], color:c[1]};
+  brain.add(m); nodes.push(m);
+  const g = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), p]);
+  brain.add(new THREE.Line(g, new THREE.LineBasicMaterial({color:c[1], transparent:true, opacity:0.45})));
+});
+for (let i=0;i<nodes.length;i++){
+  const j = (i+3)%nodes.length;
+  const g = new THREE.BufferGeometry().setFromPoints([nodes[i].position, nodes[j].position]);
+  brain.add(new THREE.Line(g, new THREE.LineBasicMaterial({color:0x3dff6a, transparent:true, opacity:0.18})));
+}
+const sparks = [];
+function fire(from, to, color){
+  const s = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), new THREE.MeshBasicMaterial({color}));
+  s.userData = {from:from.clone(), to:to.clone(), t:0};
+  brain.add(s); sparks.push(s);
+}
+let opened = false, openT = 0;
+function setOpen(v){
+  opened = v;
+  document.getElementById('toggle').textContent = v ? 'МОЗГ ОТКРЫТ' : 'ОТКРЫТЬ ШЛЕМ';
+  document.getElementById('ttl').textContent = v ? 'НЕЙРОМОЗГ' : 'ТЁМНЫЙ ШЛЕМ';
+  document.getElementById('txt').textContent = v
+    ? 'Крути сцену. Нажми цветной узел — сигнал пойдёт в центр и обратно.'
+    : 'Нажми шлем или кнопку. Шлем уйдёт вверх, внутри останется мозг.';
+}
+const ray = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+function pick(ev){
+  const rect = renderer.domElement.getBoundingClientRect();
+  const x = (ev.clientX - rect.left) / rect.width * 2 - 1;
+  const y = -((ev.clientY - rect.top) / rect.height) * 2 + 1;
+  mouse.set(x,y); ray.setFromCamera(mouse, cam);
+  if (!opened){
+    if (ray.intersectObjects(helm.children, true).length) setOpen(true);
+    return;
+  }
+  const hit = ray.intersectObjects(nodes);
+  if (hit.length){
+    const n = hit[0].object;
+    document.getElementById('ttl').textContent = n.userData.name;
+    document.getElementById('txt').textContent = n.userData.job + ' Сигнал: узел → LORD → узел.';
+    fire(n.position, new THREE.Vector3(0,0,0), n.userData.color);
+    fire(new THREE.Vector3(0,0,0), n.position, '#f5d442');
+  }
+}
+renderer.domElement.addEventListener('pointerup', pick);
+document.getElementById('toggle').onclick = () => setOpen(!opened);
+document.getElementById('close').onclick = () => setOpen(false);
+document.getElementById('pulse').onclick = () => {
+  if (!opened) setOpen(true);
+  nodes.forEach((n,i)=> setTimeout(()=>{fire(new THREE.Vector3(0,0,0), n.position, n.userData.color); fire(n.position, new THREE.Vector3(0,0,0), '#f5d442');}, i*90));
+};
+function tick(){
+  requestAnimationFrame(tick);
+  openT += ((opened?1:0) - openT) * 0.06;
+  helm.position.y = openT * 3.2;
+  helm.rotation.x = -openT * 0.35;
+  helm.visible = openT < 0.98;
+  brain.visible = openT > 0.25;
+  const s = Math.max(0.01, openT);
+  brain.scale.setScalar(s);
+  brain.rotation.y += 0.003;
+  sparks.forEach(s=>{
+    s.userData.t += 0.02;
+    s.position.lerpVectors(s.userData.from, s.userData.to, Math.min(s.userData.t,1));
+    if (s.userData.t>1.1){ brain.remove(s); s.userData.dead=true; }
+  });
+  for (let i=sparks.length-1;i>=0;i--) if (sparks[i].userData.dead) sparks.splice(i,1);
+  controls.update();
+  renderer.render(scene, cam);
+}
+tick();
+</script>
+</body>
+</html>
