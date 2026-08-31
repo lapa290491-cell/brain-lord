@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-  <title>BRAIN-LORD // WAR ROOM</title>
+  <title>EGREGOR // WAR ROOM</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Roboto+Mono:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
@@ -11,17 +11,72 @@
 <body>
   <div class="stage">
     <section id="brain-container">
-      <canvas id="brain"></canvas>
-      <div class="hud">
-        <div class="hud-row"><span class="dot"></span><span>НЕЙРОСЕТЬ АКТИВНА</span></div>
-        <div class="hud-row dim">АГЕНТОВ ОНЛАЙН: 104</div>
-        <div class="hud-row dim" id="hud-pick">УЗЕЛ: —</div>
+      <nav class="view-tabs" id="view-tabs">
+        <button type="button" class="vtab on" data-view="net">НЕЙРОСЕТЬ</button>
+        <button type="button" class="vtab" data-view="art">АРТЕФАКТЫ</button>
+        <button type="button" class="vtab" data-view="ok">ОЧЕРЕДЬ АПРУВА</button>
+      </nav>
+      <div class="view on" id="view-net">
+        <canvas id="brain"></canvas>
+        <div class="hud">
+          <div class="hud-row"><span class="dot"></span><span>НЕЙРОСЕТЬ АКТИВНА</span></div>
+          <div class="hud-row dim">АГЕНТОВ ОНЛАЙН: 104</div>
+          <div class="hud-row dim" id="hud-pick">УЗЕЛ: —</div>
+        </div>
+        <div class="hud-br">HITL · NO PUBLISH</div>
       </div>
-      <div class="hud-br">HITL · NO PUBLISH</div>
+      <div class="view" id="view-art">
+        <article class="artifact">
+          <p class="art-kicker">АРТЕФАКТ · OSINT · DRAFT</p>
+          <h1>ОТЧЕТ OSINT: Анализ инфополя</h1>
+          <p class="art-meta">CMP-1000 · статус pending_approval · источники только открытые</p>
+          <h2>1. Поле</h2>
+          <p>Заглушка. Здесь будет многостраничный отчёт клана OSINT: заголовки волны, кто уже сказал, какие рамки заняты, где дыра для своего инфоповода.</p>
+          <h2>2. Факт / версия / гипотеза</h2>
+          <ul>
+            <li><b>Факт.</b> Повестка фрагментирована. Единого героя недели нет.</li>
+            <li><b>Версия.</b> Площадка может встроиться через культурный жест, не через прямой оффер.</li>
+            <li><b>Гипотеза.</b> Короткий абсурдный формат держит внимание лучше, чем манифест.</li>
+          </ul>
+          <h2>3. Вывод для штаба</h2>
+          <p>Не публиковать. Отчёт — чтение Командующего. Следующий артефакт: ТЗ шоураннера и карточка Трикстера в очереди апрува.</p>
+        </article>
+      </div>
+      <div class="view" id="view-ok">
+        <div class="queue">
+          <article class="qcard" data-task="trick">
+            <span>MEDIA_PR · ТРИКСТЕР</span>
+            <h3>Утвердить стратегию Трикстера</h3>
+            <p>Три инфоповода, без фейкового запрета властей. Ждёт человека.</p>
+            <div class="qbtns">
+              <button type="button" class="approve" data-act="approve">УТВЕРДИТЬ (APPROVE)</button>
+              <button type="button" class="reject" data-act="reject">ОТКЛОНИТЬ (REJECT)</button>
+            </div>
+          </article>
+          <article class="qcard" data-task="cpo">
+            <span>PM_HUB · ОРКЕСТРАТОР</span>
+            <h3>Проверить медиа-план Оркестратора</h3>
+            <p>Critical Path на 14 дней. Публикации в плане нет — только черновики.</p>
+            <div class="qbtns">
+              <button type="button" class="approve" data-act="approve">УТВЕРДИТЬ (APPROVE)</button>
+              <button type="button" class="reject" data-act="reject">ОТКЛОНИТЬ (REJECT)</button>
+            </div>
+          </article>
+          <article class="qcard" data-task="osint">
+            <span>OSINT · ОТЧЁТ</span>
+            <h3>Принять отчёт «Анализ инфополя»</h3>
+            <p>Открыть слой АРТЕФАКТЫ, прочитать, затем решить здесь.</p>
+            <div class="qbtns">
+              <button type="button" class="approve" data-act="approve">УТВЕРДИТЬ (APPROVE)</button>
+              <button type="button" class="reject" data-act="reject">ОТКЛОНИТЬ (REJECT)</button>
+            </div>
+          </article>
+        </div>
+      </div>
     </section>
     <section id="control-panel">
       <header class="cp-head">
-        <div><h1>BRAIN-LORD</h1><p>WAR ROOM · СИНДИКАТ СМЫСЛОВ</p></div>
+        <div><h1>ЭГРЕГОР</h1><p>WAR ROOM · СИНДИКАТ СМЫСЛОВ</p></div>
         <span class="badge">v2.0</span>
       </header>
       <div class="block">
@@ -33,6 +88,10 @@
           <button class="tab" data-clan="osint">OSINT</button>
         </div>
         <p class="clan-note" id="clan-note">CPO · QA · очередь апрува</p>
+        <div class="pm-actions">
+          <button type="button" data-view="ok">Очередь апрува</button>
+          <button type="button" data-view="art">Артефакты</button>
+        </div>
       </div>
       <div class="block grow">
         <h2>АКТИВНЫЕ ЗАДАЧИ / КАНБАН</h2>
@@ -40,7 +99,7 @@
           <div class="kcol"><span>OSINT</span><b id="k-osint">ожидание брифа</b></div>
           <div class="kcol"><span>ГИПОТЕЗЫ</span><b id="k-hyp">—</b></div>
           <div class="kcol"><span>КОНТЕНТ</span><b id="k-cnt">—</b></div>
-          <div class="kcol wait"><span>ОДОБРЕНИЕ</span><b id="k-ok">пусто</b></div>
+          <div class="kcol wait"><span>ОДОБРЕНИЕ</span><b id="k-ok">3 карточки</b></div>
         </div>
       </div>
       <div class="block">
